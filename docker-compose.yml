@@ -1,0 +1,44 @@
+version: '3.3'
+services:
+  django_app:
+    build:
+      context: SummerPractice
+      dockerfile: Dockerfile
+    command: uwsgi --ini django_app.uwsgi.ini --http :8000
+    depends_on:
+      - django_app_db
+    volumes:
+      - ./SummerPractice:/usr/src/django_app
+      - sock:/tmp/uwsgi/
+  django_app_db:
+    image: postgres:12-alpine
+    container_name: django_app_db
+    restart: always
+    environment:
+      - PGUSER=root
+      - POSTGRES_USER=django
+      - POSTGRES_PASSWORD=django
+    volumes:
+      - mega_db:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -d django
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  nginx_service:
+    restart: always
+    build:
+      context: nginx_service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    environment:
+      - NGINX_PORT=80
+    depends_on:
+      - django_app
+    volumes:
+      - sock:/tmp/uwsgi
+      - ./SummerPractice:/usr/src/django_app
+volumes:
+  sock:
+  mega_db:
